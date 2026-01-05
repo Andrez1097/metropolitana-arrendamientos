@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Detalle | Metropolitana de Arrendamientos</title>
+
+  <link rel="stylesheet" href="./css/styles.css" />
+
+  <!-- Leaflet -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+</head>
+<body>
+
+  <div class="container">
+
+    <!-- NAV -->
+    <div class="nav">
+      <div class="brand">
+        <a href="./index.html">🏙️ Metropolitana de Arrendamientos</a>
+        <span class="badge">Detalle</span>
+      </div>
+      <div style="display:flex; gap:10px;">
+        <a class="btn secondary" href="./listado.html">Volver</a>
+      </div>
+    </div>
+
+    <!-- DETALLE -->
+    <section class="panel" id="detalle">
+      <p style="color:var(--muted)">Cargando inmueble...</p>
+    </section>
+
+  </div>
+
+  <!-- CHATBOT -->
+  <div id="chatbot" class="chatbot chatbot-collapsed"></div>
+
+  <!-- SCRIPTS -->
+  <script src="./js/inmuebles.js"></script>
+  <script src="./js/mapa.js"></script>
+  <script src="./js/chatbot.js"></script>
+
+</body>
+</html>

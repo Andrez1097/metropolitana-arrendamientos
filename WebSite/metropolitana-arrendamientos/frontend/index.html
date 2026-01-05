@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Metropolitana de Arrendamientos | Medellín</title>
+  <link rel="stylesheet" href="./css/styles.css" />
+</head>
+<body>
+  <div class="container">
+
+    <!-- NAV -->
+    <div class="nav">
+      <div class="brand">
+        🏙️ Metropolitana de Arrendamientos
+      </div>
+    </div>
+
+    <!-- HERO / BUSCADOR -->
+    <section class="panel">
+      <h1 style="margin-top:0;">Encuentra tu próximo hogar en Medellín</h1>
+      <p style="color:var(--muted);">
+        Apartamentos y casas en arriendo por zonas, precios y características.
+      </p>
+
+      <div class="buscador-grid">
+
+        <div>
+          <label>Zona</label>
+          <select id="zona">
+            <option value="">Todas</option>
+            <option value="Laureles">Laureles</option>
+            <option value="El Poblado">El Poblado</option>
+            <option value="Belén">Belén</option>
+            <option value="Envigado">Envigado</option>
+          </select>
+        </div>
+
+        <div>
+          <label>Tipo</label>
+          <select id="tipo">
+            <option value="">Todos</option>
+            <option value="apartamento">Apartamento</option>
+            <option value="casa">Casa</option>
+          </select>
+        </div>
+
+        <div>
+          <label>Precio máximo (COP)</label>
+          <select id="precio">
+            <option value="">Sin límite</option>
+            <option value="2000000">$2.000.000</option>
+            <option value="2500000">$2.500.000</option>
+            <option value="3000000">$3.000.000</option>
+            <option value="4000000">$4.000.000</option>
+          </select>
+        </div>
+
+        <div>
+          <label>Habitaciones</label>
+          <select id="habitaciones">
+            <option value="">Cualquiera</option>
+            <option value="1">1+</option>
+            <option value="2">2+</option>
+            <option value="3">3+</option>
+          </select>
+        </div>
+
+      </div>
+
+      <div style="margin-top:20px;">
+        <button id="btnBuscar" class="btn">🔍 Buscar inmuebles</button>
+      </div>
+    </section>
+
+  </div>
+
+  <div id="chatbot" class="chatbot chatbot-collapsed"></div>
+
+  <script src="./js/buscador.js"></script>
+  <script src="./js/chatbot.js"></script>
+</body>
+</html>
