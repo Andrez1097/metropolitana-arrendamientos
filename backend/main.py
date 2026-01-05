@@ -4,7 +4,7 @@ import os
 from pathlib import Path
 
 from fastapi import FastAPI, Request
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse, FileResponse
 from fastapi.staticfiles import StaticFiles
 from dotenv import load_dotenv
 
@@ -29,13 +29,18 @@ app = FastAPI(
 # ======================================================
 ENV = os.getenv("ENV", "dev").lower().strip()
 
-# Si es "1/true/yes/on" => habilita
-ENABLE_PRERENDER = os.getenv("ENABLE_PRERENDER", "0").lower().strip() in ("1", "true", "yes", "on")
+ENABLE_PRERENDER = os.getenv("ENABLE_PRERENDER", "0").lower().strip() in (
+    "1", "true", "yes", "on"
+)
+
+IS_PROD = ENV == "prod" and ENABLE_PRERENDER
 
 # ======================================================
 # BASE URL PÚBLICA
 # ======================================================
-PUBLIC_BASE_URL = os.getenv("PUBLIC_BASE_URL", "http://127.0.0.1:8000").rstrip("/")
+PUBLIC_BASE_URL = os.getenv(
+    "PUBLIC_BASE_URL", "http://127.0.0.1:8000"
+).rstrip("/")
 
 # ======================================================
 # DIRECTORIOS
@@ -45,7 +50,7 @@ PROJECT_DIR = BACKEND_DIR.parent
 FRONTEND_DIR = PROJECT_DIR / "frontend"
 
 # ======================================================
-# PRERENDER (SEO – SOLO BOTS)
+# PRERENDER (SEO – SOLO BOTS EN PRODUCCIÓN)
 # ======================================================
 prerenderer = Prerenderer(ttl_seconds=60, max_cache=200)
 
@@ -66,12 +71,12 @@ from routes.sitemap_inmuebles import router as sitemap_inmuebles_router
 # REGISTRAR ROUTERS
 # ======================================================
 
-# API
+# ---------- API ----------
 app.include_router(inmuebles_router, prefix="/api")
 app.include_router(zonas_router, prefix="/api")
 app.include_router(chatbot_router, prefix="/api")
 
-# SEO
+# ---------- SEO ----------
 app.include_router(robots_router)
 app.include_router(sitemap_index_router)
 app.include_router(sitemap_static_router)
@@ -84,25 +89,18 @@ app.include_router(sitemap_inmuebles_router)
 
 @app.on_event("startup")
 async def startup():
-    """
-    En DEV:
-      - NO iniciamos Playwright (evita crash local)
-    En PROD:
-      - Solo iniciamos si ENABLE_PRERENDER=1
-    """
-    if ENV == "prod" and ENABLE_PRERENDER:
+    if IS_PROD:
         try:
             await prerenderer.start()
-            print("✅ Prerender ENABLED (Playwright iniciado)")
+            print("✅ Prerender ACTIVADO (Playwright iniciado)")
         except Exception as e:
-            # NO rompe la app si falla
             print(f"⚠️ Prerender NO se pudo iniciar: {e}")
     else:
-        print("ℹ️ Prerender DISABLED (modo dev o flag apagado)")
+        print("ℹ️ Prerender DESACTIVADO (modo desarrollo)")
 
 @app.on_event("shutdown")
 async def shutdown():
-    if ENV == "prod" and ENABLE_PRERENDER:
+    if IS_PROD:
         try:
             await prerenderer.stop()
         except Exception:
@@ -116,7 +114,6 @@ async def shutdown():
 async def prerender_middleware(request: Request, call_next):
     path = request.url.path
 
-    # Bypass absoluto: nunca prerender API ni archivos
     if (
         path.startswith("/api")
         or path == "/robots.txt"
@@ -129,8 +126,7 @@ async def prerender_middleware(request: Request, call_next):
     ):
         return await call_next(request)
 
-    # Si prerender no está habilitado, nunca hacemos nada
-    if not (ENV == "prod" and ENABLE_PRERENDER):
+    if not IS_PROD:
         return await call_next(request)
 
     ua = request.headers.get("user-agent", "")
@@ -147,18 +143,48 @@ async def prerender_middleware(request: Request, call_next):
     try:
         html = await prerenderer.render(url)
         if html:
-            return HTMLResponse(content=html, status_code=200, headers={"X-Prerendered": "1"})
+            return HTMLResponse(
+                content=html,
+                status_code=200,
+                headers={"X-Prerendered": "1"}
+            )
     except Exception:
         pass
 
     return await call_next(request)
 
 # ======================================================
-# FRONTEND SPA
+# FRONTEND ROUTING (CLAVE PARA URLS LIMPIAS)
 # ======================================================
+
 if FRONTEND_DIR.exists():
-    app.mount("/", StaticFiles(directory=str(FRONTEND_DIR), html=True), name="frontend")
+
+    # Home
+    @app.get("/", include_in_schema=False)
+    async def home():
+        return FileResponse(FRONTEND_DIR / "index.html")
+
+    # Listado
+    @app.get("/listado", include_in_schema=False)
+    async def listado():
+        return FileResponse(FRONTEND_DIR / "listado.html")
+
+    # ⭐ DETALLE INMUEBLE (URL LIMPIA)
+    @app.get("/inmueble/{slug}", include_in_schema=False)
+    async def inmueble_detalle(slug: str):
+        return FileResponse(FRONTEND_DIR / "inmueble.html")
+
+    # Assets (CSS / JS / imágenes)
+    app.mount(
+        "/",
+        StaticFiles(directory=str(FRONTEND_DIR), html=False),
+        name="static"
+    )
+
 else:
     @app.get("/", response_class=HTMLResponse)
     async def missing_frontend():
-        return HTMLResponse("<h1>Frontend no encontrado</h1>", status_code=500)
+        return HTMLResponse(
+            "<h1>Frontend no encontrado</h1>",
+            status_code=500
+        )

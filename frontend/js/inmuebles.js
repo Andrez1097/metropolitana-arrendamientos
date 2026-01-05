@@ -2,7 +2,7 @@ const API_BASE = "http://127.0.0.1:8000";
 
 /* ======================================================
    UTILIDADES GENERALES
-   ====================================================== */
+====================================================== */
 
 function formatCOP(value) {
   return Number(value || 0).toLocaleString("es-CO", {
@@ -12,12 +12,8 @@ function formatCOP(value) {
   });
 }
 
-function getQueryParams() {
-  return Object.fromEntries(new URLSearchParams(window.location.search));
-}
-
 async function apiGet(path) {
-  const res = await fetch(`${API_BASE}${path}`, { credentials: "same-origin" });
+  const res = await fetch(`${API_BASE}${path}`);
   if (!res.ok) throw new Error(`Error API ${res.status}`);
   return res.json();
 }
@@ -32,15 +28,22 @@ function truncate(s, n = 160) {
   return t.slice(0, n - 1).trim() + "…";
 }
 
-function slugToTitle(slug) {
-  return safeText(String(slug || ""))
-    .replace(/-/g, " ")
-    .replace(/\b\w/g, (m) => m.toUpperCase());
+/* ======================================================
+   OBTENER ID DESDE URL LIMPIA
+====================================================== */
+
+function getInmuebleIdFromUrl() {
+  // /inmueble/1-apartamento-en-laureles
+  const parts = window.location.pathname.split("/").filter(Boolean);
+  if (parts[0] !== "inmueble" || !parts[1]) return null;
+
+  const id = parts[1].split("-")[0];
+  return /^\d+$/.test(id) ? id : null;
 }
 
 /* ======================================================
-   SEO META + CANONICAL + HREFLANG
-   ====================================================== */
+   SEO
+====================================================== */
 
 function setMeta({ title, description }) {
   if (title) document.title = title;
@@ -64,35 +67,9 @@ function setCanonical(url) {
   link.href = url || window.location.href;
 }
 
-function setHreflangLinks() {
-  try {
-    document
-      .querySelectorAll('link[rel="alternate"][hreflang]')
-      .forEach((n) => n.remove());
-
-    const defaults = [
-      { lang: "es-CO", href: window.location.href },
-      { lang: "x-default", href: window.location.href }
-    ];
-
-    const alternates = Array.isArray(window.__I18N_ALTERNATES__)
-      ? window.__I18N_ALTERNATES__
-      : defaults;
-
-    alternates.forEach((a) => {
-      if (!a?.lang || !a?.href) return;
-      const link = document.createElement("link");
-      link.rel = "alternate";
-      link.hreflang = a.lang;
-      link.href = a.href;
-      document.head.appendChild(link);
-    });
-  } catch (_) {}
-}
-
 /* ======================================================
-   JSON-LD
-   ====================================================== */
+   JSON-LD helpers
+====================================================== */
 
 function upsertJsonLd(id, schema) {
   if (!schema) return;
@@ -107,51 +84,56 @@ function upsertJsonLd(id, schema) {
   el.textContent = JSON.stringify(schema, null, 2);
 }
 
-/* ======================================================
-   CONFIG MARCA (ESCALABLE)
-   ====================================================== */
-
-function getBrandConfig() {
-  const base = window.location.origin;
+function buildBreadcrumbSchema(items) {
   return {
-    name: "Metropolitana de Arrendamientos",
-    baseUrl: base,
-    countryCode: "CO",
-    regionName: "Antioquia",
-    cityDefault: "Medellín",
-    inLanguage: "es-CO"
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    itemListElement: items.map((it, i) => ({
+      "@type": "ListItem",
+      position: i + 1,
+      name: safeText(it.name),
+      item: it.url ? String(it.url) : undefined
+    }))
+  };
+}
+
+function buildInmuebleSchema(inmueble) {
+  const type = inmueble?.tipo === "casa" ? "House" : "Apartment";
+  const baseUrl = window.location.origin;
+
+  return {
+    "@context": "https://schema.org",
+    "@type": type,
+    name: safeText(inmueble.titulo),
+    description: safeText(inmueble.descripcion),
+    url: `${baseUrl}${inmueble.url_publica}`,
+    image: Array.isArray(inmueble.imagenes) ? inmueble.imagenes : [],
+    address: {
+      "@type": "PostalAddress",
+      addressLocality: safeText(inmueble?.zona?.nombre || "Medellín"),
+      addressRegion: "Antioquia",
+      addressCountry: "CO"
+    },
+    floorSize: inmueble.area_m2
+      ? { "@type": "QuantitativeValue", value: inmueble.area_m2, unitCode: "MTK" }
+      : undefined,
+    numberOfRooms: inmueble.habitaciones || undefined,
+    numberOfBathroomsTotal: inmueble.banos || undefined,
+    offers: {
+      "@type": "Offer",
+      priceCurrency: "COP",
+      price: inmueble.precio_cop || undefined,
+      availability: "https://schema.org/InStock",
+      url: `${baseUrl}${inmueble.url_publica}`
+    }
   };
 }
 
 /* ======================================================
-   BREADCRUMB PROFESIONAL (VISIBLE + SCHEMA)
-   ====================================================== */
+   BREADCRUMB (VISIBLE)
+====================================================== */
 
-function detectContext() {
-  const path = window.location.pathname.split("/").filter(Boolean);
-  const q = getQueryParams();
-
-  if (!path.length) return { type: "home" };
-
-  if (path[0] === "arriendos" && path.length === 1)
-    return { type: "ciudad", ciudad: "medellin" };
-
-  if (path[0] === "arriendos" && path.length === 2)
-    return { type: "barrio", barrio: path[1] };
-
-  if (
-    (path[0] === "inmueble" || path[0] === "inmuebles") &&
-    path[1]
-  )
-    return { type: "detalle", id: path[1] };
-
-  if (path[path.length - 1] === "inmueble.html" && q.id)
-    return { type: "detalle", id: q.id };
-
-  return { type: "other" };
-}
-
-function ensureBreadcrumbContainer() {
+function ensureBreadcrumb() {
   let el = document.getElementById("breadcrumb");
   if (el) return el;
 
@@ -163,18 +145,16 @@ function ensureBreadcrumbContainer() {
   el.setAttribute("aria-label", "Breadcrumb");
   el.style.fontSize = "13px";
   el.style.margin = "6px 0 12px";
-  el.style.color = "#555";
-
   nav.parentNode.insertBefore(el, nav.nextSibling);
   return el;
 }
 
 function renderBreadcrumb(items) {
-  const host = ensureBreadcrumbContainer();
+  const host = ensureBreadcrumb();
   if (!host) return;
 
   host.innerHTML = items
-    .map((it) =>
+    .map(it =>
       it.url
         ? `<a href="${it.url}" style="color:#0066cc;text-decoration:none;">${safeText(it.name)}</a>`
         : `<span>${safeText(it.name)}</span>`
@@ -182,53 +162,106 @@ function renderBreadcrumb(items) {
     .join(" &nbsp;›&nbsp; ");
 }
 
-function buildBreadcrumbSchema(items) {
-  return {
-    "@context": "https://schema.org",
-    "@type": "BreadcrumbList",
-    "itemListElement": items.map((it, i) => ({
-      "@type": "ListItem",
-      "position": i + 1,
-      "name": safeText(it.name),
-      "item": it.url || undefined
-    }))
-  };
+/* ======================================================
+   WHATSAPP (NUMERO + MENSAJE)
+====================================================== */
+
+function buildWhatsappLink(msg) {
+  const number = (window.WHATSAPP_NUMBER || "573001112233").replace(/[^\d]/g, "");
+  const text = encodeURIComponent(msg || "Hola, me interesa este inmueble. ¿Me das más información?");
+  return `https://wa.me/${number}?text=${text}`;
 }
 
 /* ======================================================
-   AUTO (NO ROMPE NADA EXISTENTE)
-   ====================================================== */
+   DETALLE DE INMUEBLE (⭐ CLAVE ⭐)
+====================================================== */
 
-if (typeof cargarListado !== "function") function cargarListado() {}
-if (typeof cargarDetalle !== "function") function cargarDetalle() {}
+async function cargarDetalle() {
+  const id = getInmuebleIdFromUrl();
+  if (!id) return;
 
-document.addEventListener("DOMContentLoaded", async () => {
-  setHreflangLinks();
+  const cont = document.getElementById("detalle");
+  if (!cont) return;
 
-  try { await cargarListado(); } catch (_) {}
-  try { await cargarDetalle(); } catch (_) {}
+  try {
+    const inmueble = await apiGet(`/api/inmuebles/${id}`);
 
-  const brand = getBrandConfig();
-  const ctx = detectContext();
+    // ✅ Asegurar contenedor del mapa con ID correcto (#mapa)
+    // (tu mapa.js usa "mapa", no "map")
+    cont.innerHTML = `
+      <h1>${safeText(inmueble.titulo)}</h1>
 
-  const crumbs = [
-    { name: "Inicio", url: `${brand.baseUrl}/` }
-  ];
+      <p><strong>Precio:</strong> ${formatCOP(inmueble.precio_cop)}</p>
+      <p><strong>Tipo:</strong> ${safeText(inmueble.tipo)}</p>
+      <p><strong>Área:</strong> ${inmueble.area_m2 ?? "-"} m²</p>
+      <p><strong>Habitaciones:</strong> ${inmueble.habitaciones ?? "-"}</p>
+      <p><strong>Baños:</strong> ${inmueble.banos ?? "-"}</p>
 
-  if (ctx.type === "ciudad") {
-    crumbs.push({ name: "Arriendos", url: `${brand.baseUrl}/arriendos/medellin` });
+      <p style="margin-top:10px;">${safeText(inmueble.descripcion)}</p>
+
+      <div id="galeria" style="margin-top:16px;"></div>
+
+      <a class="btn" id="btnWhatsapp" target="_blank" rel="noopener">
+        📲 Contactar por WhatsApp
+      </a>
+
+      <h2 style="margin-top:22px;">📍 Ubicación aproximada</h2>
+      <div id="mapa" style="height:320px;margin-top:10px;border-radius:12px;overflow:hidden;"></div>
+    `;
+
+    // -------- GALERÍA --------
+    const galeria = document.getElementById("galeria");
+    (Array.isArray(inmueble.imagenes) ? inmueble.imagenes : []).forEach(src => {
+      const img = document.createElement("img");
+      img.src = src;
+      img.loading = "lazy";
+      img.alt = safeText(inmueble.titulo);
+      img.style.maxWidth = "320px";
+      img.style.margin = "6px";
+      img.style.borderRadius = "10px";
+      galeria.appendChild(img);
+    });
+
+    // -------- WHATSAPP --------
+    const btn = document.getElementById("btnWhatsapp");
+    if (btn) {
+      btn.href = buildWhatsappLink(inmueble.contacto_whatsapp || `Hola, me interesa el inmueble: ${inmueble.titulo}`);
+    }
+
+    // -------- SEO (TITLE por barrio) --------
+    const barrio = safeText(inmueble?.zona?.nombre || "Medellín");
+    setMeta({
+      title: `${safeText(inmueble.titulo)} en ${barrio} | Metropolitana de Arrendamientos`,
+      description: truncate(`${safeText(inmueble.titulo)} en arriendo en ${barrio}. ${safeText(inmueble.descripcion)}`, 155)
+    });
+
+    setCanonical(`${window.location.origin}${inmueble.url_publica}`);
+
+    // -------- BREADCRUMB + JSONLD --------
+    const crumbs = [
+      { name: "Inicio", url: "/" },
+      { name: "Arriendos", url: "/arriendos/medellin" },
+      { name: barrio, url: `/arriendos/medellin/${encodeURIComponent(barrio.toLowerCase().replace(/\s+/g, "-"))}` },
+      { name: inmueble.titulo }
+    ];
+
+    renderBreadcrumb(crumbs);
+    upsertJsonLd("breadcrumb", buildBreadcrumbSchema(crumbs));
+    upsertJsonLd("inmueble", buildInmuebleSchema(inmueble));
+
+    // 👉 El mapa se renderiza desde mapa.js automáticamente por ruta
+    // (no llamamos nada aquí)
+
+  } catch (e) {
+    cont.innerHTML = "<h2>Inmueble no encontrado</h2>";
+    console.error(e);
   }
+}
 
-  if (ctx.type === "barrio") {
-    crumbs.push({ name: "Arriendos", url: `${brand.baseUrl}/arriendos/medellin` });
-    crumbs.push({ name: slugToTitle(ctx.barrio) });
-  }
+/* ======================================================
+   AUTO
+====================================================== */
 
-  if (ctx.type === "detalle") {
-    crumbs.push({ name: "Arriendos", url: `${brand.baseUrl}/arriendos/medellin` });
-    crumbs.push({ name: "Detalle de inmueble" });
-  }
-
-  renderBreadcrumb(crumbs);
-  upsertJsonLd("breadcrumb", buildBreadcrumbSchema(crumbs));
+document.addEventListener("DOMContentLoaded", () => {
+  cargarDetalle();
 });

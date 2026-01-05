@@ -3,14 +3,27 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Detalle | Metropolitana de Arrendamientos</title>
 
-  <link rel="stylesheet" href="./css/styles.css" />
+  <!-- SEO básico (se sobrescribe dinámicamente en JS) -->
+  <title>Detalle de inmueble | Metropolitana de Arrendamientos</title>
+  <meta name="description" content="Detalle de inmueble en arriendo en Medellín." />
 
-  <!-- Leaflet -->
-  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <link rel="stylesheet" href="/css/styles.css" />
+
+  <!-- Leaflet (MAPA) -->
+  <link
+    rel="stylesheet"
+    href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+    integrity="sha256-sA+e2H1LG2nF6rI4Jp1uFQp1gH7x0xkS0bM6pR0X2VY="
+    crossorigin=""
+  />
+  <script
+    src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+    integrity="sha256-o9N1j7kC6Yt1kz1nS4Yh6XG6j2zGZtPFl1kY0E6pP3s="
+    crossorigin=""
+  ></script>
 </head>
+
 <body>
 
   <div class="container">
@@ -18,17 +31,45 @@
     <!-- NAV -->
     <div class="nav">
       <div class="brand">
-        <a href="./index.html">🏙️ Metropolitana de Arrendamientos</a>
+        <a href="/">🏙️ Metropolitana de Arrendamientos</a>
         <span class="badge">Detalle</span>
       </div>
-      <div style="display:flex; gap:10px;">
-        <a class="btn secondary" href="./listado.html">Volver</a>
+      <div>
+        <a class="btn secondary" href="/listado">Volver</a>
       </div>
     </div>
 
+    <!-- BREADCRUMB (dinámico por JS) -->
+    <nav id="breadcrumb" style="margin:10px 0; font-size:14px;"></nav>
+
     <!-- DETALLE -->
     <section class="panel" id="detalle">
-      <p style="color:var(--muted)">Cargando inmueble...</p>
+
+      <h1 id="titulo">Cargando inmueble…</h1>
+
+      <h2 id="precio" style="color:#2a7;"></h2>
+
+      <p id="descripcion"></p>
+
+      <!-- GALERÍA -->
+      <div
+        id="galeria"
+        style="display:flex; flex-wrap:wrap; gap:10px; margin-top:10px;"
+      ></div>
+
+      <!-- MAPA -->
+      <h3 style="margin-top:20px;">📍 Ubicación aproximada</h3>
+      <!-- ⚠️ ID CLAVE: debe ser "mapa" -->
+      <div
+        id="mapa"
+        style="height:300px; width:100%; margin:12px 0; border-radius:10px;"
+      ></div>
+
+      <!-- CTA -->
+      <button id="whatsapp" class="btn primary">
+        📲 Contactar por WhatsApp
+      </button>
+
     </section>
 
   </div>
@@ -36,10 +77,10 @@
   <!-- CHATBOT -->
   <div id="chatbot" class="chatbot chatbot-collapsed"></div>
 
-  <!-- SCRIPTS -->
-  <script src="./js/inmuebles.js"></script>
-  <script src="./js/mapa.js"></script>
-  <script src="./js/chatbot.js"></script>
+  <!-- SCRIPTS (SIEMPRE AL FINAL + defer implícito) -->
+  <script src="/js/inmuebles.js"></script>
+  <script src="/js/mapa.js"></script>
+  <script src="/js/chatbot.js"></script>
 
 </body>
 </html>

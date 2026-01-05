@@ -10,7 +10,7 @@ from sqlmodel import Session, select
 from db.database import get_session
 from models.inmueble import Inmueble, Zona
 
-router = APIRouter(prefix="/api/inmuebles", tags=["inmuebles"])
+router = APIRouter(prefix="/inmuebles", tags=["inmuebles"])
 
 
 # ======================================================
