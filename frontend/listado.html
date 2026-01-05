@@ -1,0 +1,94 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Listado | Metropolitana de Arrendamientos</title>
+  <meta name="description" content="Arriendos de apartamentos y casas en Medellín. Metropolitana de Arrendamientos." />
+
+  <link rel="stylesheet" href="./css/styles.css" />
+</head>
+<body>
+
+  <div class="container">
+
+    <!-- ================= NAV ================= -->
+    <div class="nav">
+      <div class="brand">
+        <a href="./index.html">🏙️ Metropolitana de Arrendamientos</a>
+        <span class="badge">Listado</span>
+      </div>
+      <div style="display:flex; gap:10px;">
+        <a class="btn secondary" href="./index.html">Home</a>
+      </div>
+    </div>
+
+    <!-- ================= LISTADO ================= -->
+    <section class="panel">
+
+      <h2 style="margin:0 0 6px;">Resultados</h2>
+
+      <!-- ===== FILTROS VISIBLES (UX PRO) ===== -->
+      <div class="buscador-grid" id="filtrosListado">
+
+        <div>
+          <label>Zona</label>
+          <select id="filtroZona">
+            <option value="">Todas</option>
+          </select>
+        </div>
+
+        <div>
+          <label>Tipo</label>
+          <select id="filtroTipo">
+            <option value="">Todos</option>
+            <option value="apartamento">Apartamento</option>
+            <option value="casa">Casa</option>
+          </select>
+        </div>
+
+        <div>
+          <label>Precio máximo</label>
+          <select id="filtroPrecio">
+            <option value="">Sin límite</option>
+            <option value="2000000">$2.000.000</option>
+            <option value="2500000">$2.500.000</option>
+            <option value="3000000">$3.000.000</option>
+            <option value="4000000">$4.000.000</option>
+          </select>
+        </div>
+
+        <div>
+          <label>Habitaciones</label>
+          <select id="filtroHab">
+            <option value="">Cualquiera</option>
+            <option value="1">1+</option>
+            <option value="2">2+</option>
+            <option value="3">3+</option>
+          </select>
+        </div>
+
+      </div>
+
+      <!-- ===== RESUMEN ===== -->
+      <div
+        id="resumen"
+        style="color: var(--muted); font-size: 13px; margin:10px 0;"
+      ></div>
+
+      <!-- ===== CARDS ===== -->
+      <div id="cards" class="grid"></div>
+
+    </section>
+
+  </div>
+
+  <!-- ================= CHATBOT ================= -->
+  <div id="chatbot" class="chatbot chatbot-collapsed"></div>
+
+  <!-- ================= SCRIPTS ================= -->
+  <script src="./js/inmuebles.js"></script>
+  <script src="./js/chatbot.js"></script>
+
+</body>
+</html>
